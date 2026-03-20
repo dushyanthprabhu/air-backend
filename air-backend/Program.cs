@@ -1,3 +1,6 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -5,10 +8,22 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
+builder.Services.AddAuthorization();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(
+    options =>
+    {
+        options.RequireHttpsMetadata = false;
+        options.Audience = builder.Configuration["Authentication:Audience"];
+        options.MetadataAddress = builder.Configuration["Authentication:MetadataAddress"]!;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidIssuer = builder.Configuration["Authentication:ValidIssuer"]
+        };
+    }
+);
+
 
 var app = builder.Build();
-
-Console.WriteLine(app.Environment.EnvironmentName);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -17,8 +32,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseHttpsRedirection();
+app.MapControllers().RequireAuthorization();
 
-app.MapControllers();
 
 app.Run();
